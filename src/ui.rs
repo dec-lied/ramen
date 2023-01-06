@@ -1,5 +1,5 @@
 use tui::layout::{Layout, Direction, Constraint, Rect, Alignment};
-use tui::style::{Modifier, Color};
+use tui::style::Color;
 use tui::text::{Spans, Span, Text};
 use tui::widgets::{Paragraph, BorderType, List, ListItem, Tabs};
 use tui::
@@ -9,7 +9,6 @@ use tui::
 };
 use tui_textarea::TextArea;
 use std::fs;
-use std::io::Write;
 
 #[derive(PartialEq)]
 pub enum Mode
@@ -58,7 +57,7 @@ pub fn vertical_panels2(area: Rect) -> Vec<Rect>
 
 pub fn title<'a>() -> Paragraph<'a>
 {
-    return Paragraph::new("test".to_string()).block
+    return Paragraph::new("ramen".to_string()).block
     (
         Block::default()
             .borders(Borders::ALL)
@@ -80,7 +79,7 @@ pub fn tabs(titles: Vec<String>) -> Tabs<'static>
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title("tabs")
+                .title("Consoles")
                 .title_alignment(Alignment::Center)
         )
         .style
@@ -256,7 +255,7 @@ pub fn get_rom_dirs(dir: &String) -> Vec<String>
         .collect::<Vec<String>>()
 }
 
-pub fn get_roms_from_dir<'a>(dir: &String) -> Vec<ListItem<'a>>
+pub fn get_roms_from_dir<'a>(dir: &String) -> Vec<String>
 {
     use std::path::PathBuf;
 
@@ -284,7 +283,7 @@ pub fn get_roms_from_dir<'a>(dir: &String) -> Vec<ListItem<'a>>
             }
         )
         .collect::<Vec<String>>()
-        .iter()
-        .map(|n| ListItem::new(n.clone()))
-        .collect::<Vec<ListItem>>()
+        // .iter()
+        // .map(|n| ListItem::new(n.clone()))
+        // .collect::<Vec<ListItem>>()
 }

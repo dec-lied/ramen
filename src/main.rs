@@ -1,17 +1,18 @@
 pub mod ui;
 
+use std::fs::{self, File};
+use std::io::Read;
 use std::sync::mpsc;
 use std::{io, thread};
 use std::time::{Duration, Instant};
-use tui::layout::{Alignment, Rect};
-use tui::style::{Modifier, Color};
-use tui::widgets::{Paragraph, BorderType, List, ListItem, ListState, Tabs, Widget};
+use tui::layout::Rect;
+use tui::style::Modifier;
+use tui::widgets::{Paragraph, List, ListItem, ListState, Tabs};
 use tui::
 {
     Terminal,
     style::Style,
     backend::CrosstermBackend,
-    widgets::{Block, Borders},
 };
 use crossterm::
 {
@@ -57,12 +58,36 @@ fn main() -> Result<(), std::io::Error>
 
     let mut typing_mode: Mode = Mode::NORMAL;
 
-    let mut rom_dir: String = "C:\\Users\\Gavin\\Documents\\ROMS".to_string();
+    let mut rom_dir_file: File = match File::open(".\\rom_dir.json")
+    {
+        Ok(file) => file,
+        Err(_) =>
+        {
+            File::create(".\\rom_dir.json").unwrap();
+            File::open(".\\rom_dir.json").unwrap()
+        }
+    };
+
+    let mut rom_dir: String = String::new();
+
+    rom_dir_file.read_to_string(&mut rom_dir).unwrap();
+
+    rom_dir = match rom_dir.len()
+    {
+        0 => "C:\\Users\\Gavin".to_string(),
+        _ => serde_json::from_str(&rom_dir).unwrap()
+    };
+
+        // "C:\\Users\\Gavin\\Desktop\\emulators\\ROMS".to_string();
 
     let mut titles: Vec<String> = ui::get_rom_dirs(&rom_dir);
     let mut tab_index: usize = 0;
 
-    let mut rom_list_items: Vec<ListItem> = ui::get_roms_from_dir(&(rom_dir.clone() + &"\\".to_string() + &titles[tab_index]));
+    let mut rom_list_items: Vec<ListItem> = ui::get_roms_from_dir(&(rom_dir.clone() + &"\\".to_string() + &titles[tab_index]))
+        .iter()
+        .map(|n| ListItem::new(n.clone()))
+        .collect::<Vec<ListItem>>();
+
     let mut rom_list_state: ListState = ListState::default();
 
     let mut text_editor: TextArea = ui::text_area(rom_dir.clone());
@@ -177,7 +202,11 @@ fn main() -> Result<(), std::io::Error>
 
                         tab_index -= 1;
 
-                        rom_list_items = ui::get_roms_from_dir(&(rom_dir.clone() + &"\\".to_string() + &titles[tab_index]));
+                        rom_list_items = ui::get_roms_from_dir(&(rom_dir.clone() + &"\\".to_string() + &titles[tab_index]))
+                            .iter()
+                            .map(|n| ListItem::new(n.clone()))
+                            .collect::<Vec<ListItem>>();
+
                         rom_list_state.select(None);
                     },
                     KeyCode::Char('l') =>
@@ -191,19 +220,20 @@ fn main() -> Result<(), std::io::Error>
                             tab_index += 1;
                         }
 
-                        rom_list_items = ui::get_roms_from_dir(&(rom_dir.clone() + &"\\".to_string() + &titles[tab_index]));
+                        rom_list_items = ui::get_roms_from_dir(&(rom_dir.clone() + &"\\".to_string() + &titles[tab_index]))
+                            .iter()
+                            .map(|n| ListItem::new(n.clone()))
+                            .collect::<Vec<ListItem>>();
+
                         rom_list_state.select(None);
                     },
                     KeyCode::Enter =>
                     {
                         if let Some(rom_index) = rom_list_state.selected()
                         {
-                            use std::process::Command;
-                            use std::os::windows::process::CommandExt;
+                            let rom_to_run: String = format!("{}\\{}\\{}", rom_dir, titles[tab_index], (&ui::get_roms_from_dir(&(rom_dir.clone() + &"\\".to_string() + &titles[tab_index]))[rom_index])).to_string();
 
-                            let rom_to_run = rom_list_items[rom_index].clone();
-
-                            Command::new("cmd").args(&["/C", "start", &"path".to_string()]).creation_flags(0x00000008); // detached process
+                            opener::open(std::path::Path::new(&rom_to_run)).expect(&format!("failed to open:\n{}", rom_to_run).to_string());
                         }
                     }
                     _ => {}
@@ -231,6 +261,7 @@ fn main() -> Result<(), std::io::Error>
                     KeyCode::Enter =>
                     {
                         rom_dir = text_editor.into_lines().join("");
+
                         titles = ui::get_rom_dirs(&rom_dir);
 
                         text_editor = ui::text_area(rom_dir.clone());
@@ -239,6 +270,8 @@ fn main() -> Result<(), std::io::Error>
                             Style::default()
                                 .add_modifier(Modifier::HIDDEN)
                         );
+
+                        fs::write(".\\rom_dir.json", serde_json::to_string(&rom_dir).unwrap()).unwrap();
 
                         typing_mode = Mode::NORMAL;
                     },
